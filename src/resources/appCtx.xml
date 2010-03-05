@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+                http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+                http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
+                http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd"
+	default-autowire="byName">
+
+	<!-- Implements Scope as required by Spring -->
+	<bean id="siteScope" class="com.eliotsykes.scope.SiteScope" />
+
+	<!-- Tell Spring about our custom scope -->
+	<bean class="org.springframework.beans.factory.config.CustomScopeConfigurer">
+		<property name="scopes">
+			<map>
+				<entry key="site" value-ref="siteScope" />
+			</map>
+		</property>
+	</bean>
+
+	<!-- 
+	     Imagine we're running 3 different video hire web sites under one webapp:
+	     1. Netflix at www.netflix.com
+	     2. Blockbuster at www.blockbuster.com
+	     3. BetamaxRules at www.betamaxrules.com
+	   
+	     We're going to use TitleFormatters, an imaginary bean that formats
+	     the html <title> on each page of the webapp. A site can have a custom
+	     TitleFormatter
+	     
+	     NOTE! The naming conventions below are very important.
+	-->
+
+  <!-- PageTools, TitleFormatter, XxxTitleFormatter classes are NOT in the sample code -->
+  <!-- 
+       When you use pageTools.getTitleFormatter() in your app, the correct
+       titleFormatter bean for the current site will be returned.
+  -->
+	<bean id="pageTools" class="com.eliotsykes.scope.PageTools">
+	  <property name="titleFormatter" ref="titleFormatter"/>
+	</bean>
+	
+	<!-- 
+	     titleFormatter site-scoped bean. This is a bean that has the smarts to
+	     select the appropriate title formatter bean based on the site
+	-->
+	<bean id="titleFormatter" class="com.eliotsykes.scope.SiteBeanLookupFactoryBean" scope="site">
+		<aop:scoped-proxy />
+		<constructor-arg value="com.eliotsykes.scope.TitleFormatter" />
+	</bean>
+	
+	<!-- 
+	   All beans used in site scope must be prefixed with "default" OR with the
+	   site id e.g. "netflix", "blockbuster", or "betamaxRules". See ids in
+	   com.eliotsykes.scope.Site.
+	-->
+	<!-- Simply outputs html titles like "{movie_title_here}" -->
+	<bean id="defaultTitleFormatter" class="com.eliotsykes.scope.TitleFormatter" />
+	
+	<!-- Outputs html titles like "{movie_title_here} - Netflix" -->
+	<bean id="netflixTitleFormatter" class="com.eliotsykes.scope.NetflixTitleFormatter" />
+	
+	<!-- Outputs html title like "Blockbuster presents: {movie_title_here}" -->
+	<bean id="blockbusterTitleFormatter" class="com.eliotsykes.scope.BlockbusterTitleFormatter" />
+	
+	<!-- 
+	     NOTE! There is no betamaxRulesTitleFormatter, this means the BetamaxRules
+	     site will use the defaultTitleFormatter bean.
+  -->
+	
+</beans>
